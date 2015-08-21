@@ -1,4 +1,4 @@
-package com.ingartek.prueba.csp.CSP;
+package com.ingartek.csp.knapsackinvertido;
 
 public enum TipoSolucion {
 	
