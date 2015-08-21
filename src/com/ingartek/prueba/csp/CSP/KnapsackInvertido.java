@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 
@@ -17,7 +20,6 @@ import org.chocosolver.solver.search.solution.Solution;
 import org.chocosolver.solver.search.strategy.IntStrategyFactory;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.VariableFactory;
-//import org.chocosolver.util.ESat;
 
 /**
  * 
@@ -26,8 +28,14 @@ import org.chocosolver.solver.variables.VariableFactory;
  * 
  * <p>
 		Para ejecutar, hacer:
-			KnapsackInvertido problema = new KnapsackInvertido(Integer pTamanoGrupo, List<Vehiculo> pVehiculos, TipoSolucion pTipoSolucion);
-    		problema.execute();
+			<pre>
+KnapsackInvertido problema = new KnapsackInvertido(Integer pTamanoGrupo, List<Vehiculo> pVehiculos, TipoSolucion pTipoSolucion);
+problema.execute();
+			</pre>
+
+		Según lo que se le indique a {@link TipoSolucion}, el resultado será único o no.
+
+		Para obtener los resultados, hay que llamar a la función {@link KnapsackInvertido#getSoluciones()}
 
  * </p>
  * 
@@ -46,52 +54,68 @@ public class KnapsackInvertido extends AbstractProblem {
 	private static Logger LOGGER = Logger.getLogger(KnapsackInvertido.class.getName());
 	
 	// Constantes
+	/**
+	 * Valor máximo de cantidad de vehículos
+	 */
 	private Integer MAX_DOMAIN_VARS = 50;
 	
 	// Datos
+	/**
+	 * El grupo al que representa.
+	 */
 	private Grupo grupo = new Grupo(14);
+	/**
+	 * La lista de vehículos (mejor dicho, los tipos de vehículos).
+	 */
 	private List<Vehiculo> vehiculos = new ArrayList<Vehiculo>();
 	
-	//----------------------------------------------------
-	/*private Vehiculo v1 = new Vehiculo(2, (float) 50);
-	private Vehiculo v2 = new Vehiculo(7, (float) 71);
-	private Vehiculo v3 = new Vehiculo(3, (float) 20);*/
-	//----------------------------------------------------
-	
 	// Variables
-	//----------------------------------------
-	/*private IntVar varCantidadVehiculos1;
-	private IntVar varCantidadVehiculos2;
-	private IntVar varCantidadVehiculos3;*/
-	//----------------------------------------
-
+	/**
+	 * Un array de variables, que cada una contiene aquella cantidad de vehículos necesarios que se desean calcular.
+	 */
 	private IntVar[] variables = new IntVar[3];
+	/**
+	 * La cantidad de asientos de cada vehículo. Necesario para calcular con el algoritmo CSP de knapsack.
+	 */
 	private int[] asientosVehiculos = new int[3];
+	/**
+	 * Los costes de cada vehículo. También es necesario.
+	 */
 	private int[] costesVehiculos = new int[3];
-	
+	/**
+	 * La variable de coste de CSP.
+	 */
 	private IntVar varCoste;
 	
 	// Datos extra
 	/**
-	 * Indica el tipo de soluci�n que se va a usar el this.solve().
+	 * Indica el tipo de solución que se va a usar el this.solve().
 	 */
 	private TipoSolucion tipoSolucion;
+	/**
+	 * Indica la cantidad de soluciones que se han almacenado en {@link KnapsackInvertido#soluciones}
+	 */
 	private Long cantidadSoluciones = 0L;
+	/**
+	 * Aquí es donde se almacenan las soluciones halladas. La lista de fuera indica el nivel de la solución (1ª solución, 2ª solución, 3ª solución, ... Nésima solución). 
+	 * Dentro de esa lista hay un mapa con la cantidad necesaria para cada vehículo.
+	 */
+	private static List<Map<Vehiculo, Integer>> soluciones = new ArrayList<Map<Vehiculo, Integer>>();
 	
 	/*
-	 * M�todos
+	 * Métodos
 	 */
 	/**
 	 * 
 	 	<p>
 	 
-	 	Construye un objeto para realizar la b�squeda.
+	 	Construye un objeto para realizar la búsqueda. Dependiendo de lo que se le indique a {@link TipoSolucion}, obtendremos diferentes resultados.
 	 
 	 	</p>
 	 * 
-	 * @param pTamanoGrupo El tama�o del grupo.
-	 * @param pVehiculos La lista de los tipos de veh�culos.
-	 * @param pTipoSolucion El tipo de soluci�n que se le va a dar esta vez. Ver {@link TipoSolucion}.
+	 * @param pTamanoGrupo El tamaño del grupo.
+	 * @param pVehiculos La lista de los tipos de vehículos.
+	 * @param pTipoSolucion El tipo de solución que se le va a dar esta vez. Ver {@link TipoSolucion}.
 	 */
 	public KnapsackInvertido(Integer pTamanoGrupo, List<Vehiculo> pVehiculos, TipoSolucion pTipoSolucion){
 		grupo.setPersonas(pTamanoGrupo);
@@ -127,7 +151,6 @@ public class KnapsackInvertido extends AbstractProblem {
 			LOGGER.setLevel(java.util.logging.Level.ALL);
 			LOGGER.config("Configuraci�n del logger realizada.");
 
-
 		} catch (SecurityException e) {
 			LOGGER.severe("SecurityException: " + e.getMessage());
 			e.printStackTrace();
@@ -151,23 +174,6 @@ public class KnapsackInvertido extends AbstractProblem {
 			i++;
 		}
 		
-		/*Esto se hace ahora con el foreach
-		 * varCantidadVehiculos1 = VariableFactory.bounded("var1", 0, MAX_DOMAIN_VARS, solver);
-		varCantidadVehiculos2 = VariableFactory.bounded("var2", 0, MAX_DOMAIN_VARS, solver);
-		varCantidadVehiculos3 = VariableFactory.bounded("var3", 0, MAX_DOMAIN_VARS, solver);
-
-		variables[0] = varCantidadVehiculos1;
-		variables[1] = varCantidadVehiculos2;
-		variables[2] = varCantidadVehiculos3;
-		
-		asientosVehiculos[0] = v1.getAsientos();
-		asientosVehiculos[1] = v2.getAsientos();
-		asientosVehiculos[2] = v3.getAsientos();
-		
-		costesVehiculos[0] = Math.round(v1.getCoste());
-		costesVehiculos[1] = Math.round(v2.getCoste());
-		costesVehiculos[2] = Math.round(v3.getCoste());*/
-		
 		varCoste = VariableFactory.bounded("coste", 0, 99999, solver);
 		
 		IntVar scalar = VariableFactory.fixed("ocupacion", grupo.getPersonas(), solver);
@@ -178,11 +184,7 @@ public class KnapsackInvertido extends AbstractProblem {
 
 	@Override
 	public void configureSearch() {
-		//@SuppressWarnings("rawtypes")
-		/*AbstractStrategy strat = */IntStrategyFactory.lexico_LB(variables);
-		// Esto no lo hacemos porque no queremos una búsqueda dicotómica. 
-		//        solver.set(new ObjectiveStrategy(varCoste, OptimizationPolicy.BOTTOM_UP), strat);
-        //Chatterbox.showDecisions(solver);
+		IntStrategyFactory.lexico_LB(variables);
 	}
 
 	@Override
@@ -191,59 +193,74 @@ public class KnapsackInvertido extends AbstractProblem {
 		
 		if(tipoSolucion.equals(TipoSolucion.OptimalSolution)){
 			solver.findOptimalSolution(ResolutionPolicy.MINIMIZE, varCoste);
+			int i = 0;
+			do{
+				
+				for(int j = 0; j < variables.length; j++){
+					addSolucion(i, vehiculos.get(j), variables[j].getValue());
+				}
+				
+				i++;
+				
+			}while(solver.nextSolution());
+			cantidadSoluciones = (long) (i+1);
+			
 		}else if(tipoSolucion.equals(TipoSolucion.AllOptimalSolutions)){
-			solver.findAllOptimalSolutions(ResolutionPolicy.MINIMIZE, varCoste, false);
-		}else if(tipoSolucion.equals(TipoSolucion.AllSolutions)){
-			cantidadSoluciones = solver.findAllSolutions();
+			solver.findAllOptimalSolutions(ResolutionPolicy.MINIMIZE, varCoste, true);
+			int i = 0;
+			do{
+				
+				for(int j = 0; j < variables.length; j++){
+					addSolucion(i, vehiculos.get(j), variables[j].getValue());
+				}
+				
+				i++;
+				
+			}while(solver.nextSolution());
+			cantidadSoluciones = (long) (i+1);
 		}else{
-			solver.findOptimalSolution(ResolutionPolicy.MINIMIZE, varCoste);
+			
+			int i = 0;
+			if(solver.findSolution()){
+				do{
+					
+					for(int j = 0; j < variables.length; j++){
+						addSolucion(i, vehiculos.get(j), variables[j].getValue());
+					}
+					
+					i++;
+					
+				}while(solver.nextSolution());
+			}	
+			
+			cantidadSoluciones = (long) (i+1);
+			
 		}
 		
-		// Buscar una �nica soluci�n �ptima:
-//		solver.findOptimalSolution(ResolutionPolicy.MINIMIZE, varCoste);
-		
-		// Buscar todas las soluciones �ptimas:
-		solver.findAllOptimalSolutions(ResolutionPolicy.MINIMIZE, varCoste, false);
-		
-		// Buscar todas las soluciones:
-//		cantidadSoluciones = solver.findAllSolutions();
-		
-		/*ESat feasible = solver.isFeasible();
-		if(feasible.equals(ESat.TRUE)){
-			LOGGER.info("feasible = TRUE");
-		}else if(feasible.equals(ESat.FALSE)){
-			LOGGER.info("feasible = FALSE");
-		}else if(feasible.equals(ESat.UNDEFINED)){
-			LOGGER.info("feasible = UNDEFINED");
-		}
-		
-		ESat satisfied = solver.isSatisfied();
-		if(satisfied.equals(ESat.TRUE)){
-			LOGGER.info("satisfied = TRUE");
-		}else if(satisfied.equals(ESat.FALSE)){
-			LOGGER.info("satisfied = FALSE");
-		}else if(satisfied.equals(ESat.UNDEFINED)){
-			LOGGER.info("satisfied = UNDEFINED");
-		}
-//		Chatterbox.printAllFeatures(solver);*/
 	}
 
 	@Override
 	public void prettyOut() {
 		StringBuilder st = new StringBuilder(String.format("Knapsack Invertido \n"));
+		
 		int i = 0;
 		for (Vehiculo vehi : vehiculos) {
-			st.append(String.format("\tVeh�culo " + i + ". Asientos=%d - Coste=%d - Cantidad=%d\n", vehi.getAsientos().intValue(), vehi.getCoste().intValue(), variables[i].getValue()));
+			st.append(String.format("\tVehículo " + i + ". Asientos=%d - Coste=%d - Cantidad=%d\n", vehi.getAsientos().intValue(), vehi.getCoste().intValue(), variables[i].getValue()));
 			
 			i++;
 		}
-		/*st.append(String.format("\tVeh�culo 1. Asientos=%d - Coste=%d - Cantidad=%d\n", v1.getAsientos().intValue(), v1.getCoste().intValue(), varCantidadVehiculos1.getValue()));
-		st.append(String.format("\tVeh�culo 2. Asientos=%d - Coste=%d - Cantidad=%d\n\n", v2.getAsientos().intValue(), v2.getCoste().intValue(), varCantidadVehiculos2.getValue()));
-		st.append(String.format("\tVeh�culo 3. Asientos=%d - Coste=%d - Cantidad=%d\n\n", v3.getAsientos().intValue(), v3.getCoste().intValue(), varCantidadVehiculos3.getValue()));*/
+		
 		st.append(String.format("\tCoste total: %d", varCoste.getValue()));
 		LOGGER.info(st.toString());
+		
 	}
 
+	/**
+	 * 
+	 * Este método es el Main, para ejecutar las pruebas. Modificar aquí el tamaño de grupo a calcular y los vehículos con sus capacidades y sus costes. Personalizar el tipo de búsqueda que se desea.
+	 * 
+	 * @param args No hay que pasarle nada como argumentos.
+	 */
     public static void main(String[] args) {
     	Vehiculo v1 = new Vehiculo(2, (float) 50);
     	Vehiculo v2 = new Vehiculo(7, (float) 71);
@@ -253,23 +270,48 @@ public class KnapsackInvertido extends AbstractProblem {
     	vehics.add(v2);
     	vehics.add(v3);
     	
-    	TipoSolucion sol = TipoSolucion.AllOptimalSolutions;
+    	TipoSolucion sol = TipoSolucion.NormalSolution;
     	
     	ejecutar(14, vehics, sol);    	
     }
 
-    private static void ejecutar(Integer pTamanoGrupo, List<Vehiculo> pVehiculos, TipoSolucion pTipoSolucion){
+    /**
+     * 
+     * <p>Método al que se debe llamar si se desea realizar la búsqueda Knapsack. Se le debe facilitar los parámetros siguientes.</p>
+     * 
+     * <p>Si se desean obtener las <b>solucione(s)</b>, llamar al método {@link KnapsackInvertido#getSoluciones()}.</p>
+     * 
+     * @param pTamanoGrupo El tamaño del grupo.
+     * @param pVehiculos Los vehículos.
+     * @param pTipoSolucion El tipo de solución que se desea
+     */
+    public static void ejecutar(Integer pTamanoGrupo, List<Vehiculo> pVehiculos, TipoSolucion pTipoSolucion){
     	KnapsackInvertido problema = new KnapsackInvertido(pTamanoGrupo, pVehiculos, pTipoSolucion);
     	problema.execute();
     	problema.prettyOut();
     	Solver s = problema.getSolver();
     	ISolutionRecorder solRec = s.getSolutionRecorder();
-    	List<Solution> soluciones = solRec.getSolutions();
+    	List<Solution> sols = solRec.getSolutions();
     	
     	System.out.println("[*] Imprimiendo soluciones:");
-    	for (Solution sol : soluciones) {
-			System.out.println("- Soluci�n: " + sol.toString() );
+    	for (Solution sol : sols) {
+			System.out.println("- Solución: " + sol.toString() );
 		}
+    	
+    	StringBuilder builder = new StringBuilder();
+    	builder.append("[*] Imprimiendo soluciones NUEVAS--\n");
+    	for (int i = 0; i < soluciones.size(); i++) {
+    		builder.append("\t" + i + " solución:\n");
+			Map<Vehiculo, Integer> unaSolucion = soluciones.get(i);
+			Iterator<Vehiculo> itVehiculos = unaSolucion.keySet().iterator();
+			while(itVehiculos.hasNext()){
+				Vehiculo vehi = itVehiculos.next();
+				Integer valor = unaSolucion.get(vehi);
+				builder.append("\t\tVehiculo con " + vehi.getAsientos() + " asientos: " + valor + "\n");
+			}
+		}
+    	
+    	LOGGER.info(builder.toString());
     }
 
     public int getCantidadVehiculoX(int i){
@@ -281,6 +323,15 @@ public class KnapsackInvertido extends AbstractProblem {
     	
     }
 
+    /**
+     * 
+     * <p>Devuelve el coste del vehículo enésimo. Si no existe, devuelve -1.</p>
+     * 
+     * @param i
+     * 
+     * @return (Float) El coste del vehículo. Si no existe el vehículo, devuelve -1.
+     *  
+     */
     public Float getCosteVehiculoX(int i){
     	if(i < variables.length && i < vehiculos.size() ){
     		return variables[i].getValue()*vehiculos.get(i).getCoste();
@@ -288,30 +339,6 @@ public class KnapsackInvertido extends AbstractProblem {
     		return (float) -1;
     	}
     }
-
-    /*public int getCantidadVehiculo1(){
-    	return varCantidadVehiculos1.getValue();
-    }
-
-    public Float getCosteVehiculo1(){
-    	return varCantidadVehiculos1.getValue()*v1.getCoste();
-    }
-
-    public int getCantidadVehiculo2(){
-    	return varCantidadVehiculos2.getValue();
-    }
-
-    public Float getCosteVehiculo2(){
-    	return varCantidadVehiculos2.getValue()*v2.getCoste();
-    }
-
-    public int getCantidadVehiculo3(){
-    	return varCantidadVehiculos3.getValue();
-    }
-
-    public Float getCosteVehiculo3(){
-    	return varCantidadVehiculos3.getValue()*v3.getCoste();
-    }*/
 
     public int getCosteTotal(){
     	return varCoste.getValue();
@@ -325,8 +352,36 @@ public class KnapsackInvertido extends AbstractProblem {
 		this.vehiculos = vehiculos;
 	}
     
-	public enum TipoSolucion{
-		OptimalSolution, AllOptimalSolutions, AllSolutions;
+	/**
+	 * 
+	 * <p>Método que sirve para añadir una solución a {@link KnapsackInvertido#soluciones}.</p>
+	 * 
+	 * @param pNivelSolucion El nivel de la solución (1º, 2º...)
+	 * @param pVehiculo El vehículo asociado.
+	 * @param pValor La cantidad de vehículos necesarios que indica esta solución.
+	 */
+	private void addSolucion(Integer pNivelSolucion, Vehiculo pVehiculo, Integer pValor){
+		
+		try{
+			Map<Vehiculo, Integer> sols = soluciones.get(pNivelSolucion);
+			sols.put(pVehiculo, pValor);
+		}catch(IndexOutOfBoundsException e){
+			Map<Vehiculo, Integer> sols = new HashMap<Vehiculo, Integer>();
+			soluciones.add(pNivelSolucion, sols);
+			sols.put(pVehiculo, pValor);
+		}
+		
+	}
+	
+	/**
+	 * 
+	 * <p>Método que devuelve las soluciones obtenidas.</p>
+	 * 
+	 * @return List<Map<Vehiculo, Integer>> Las soluciones.
+	 * 
+	 */
+	public List<Map<Vehiculo, Integer>> getSoluciones(){
+		return soluciones;
 	}
 	
 }

@@ -2,11 +2,35 @@ package com.ingartek.prueba.csp.CSP;
 
 import java.util.UUID;
 
+/**
+ * <h1>Vehiculo</h1>
+ * <p>Esta clase refleja un tipo de Vehículo. Los parámetros imprescindibles son los de: </p>
+ * <ul>
+ * 	<li>{@link Vehiculo#asientos}: Son los asientos libres para dar servicio al grupo. No hay que tener en cuenta al conductor. De manera que si un vehículo tiene 5 plazas, aquí habría que indicar 4 asientos.</li>
+ * 	<li>{@link Vehiculo#coste}: Es el coste para utilizar el vehículo de este tipo.</li>
+ * </ul>
+ * 
+ * @author Jon Inazio
+ *
+ */
 public class Vehiculo {
 
+	/**
+	 * Identificador interno.
+	 */
 	private UUID id;
+	/**
+	 * La cantidad de asientos LIBRES (sin contar con el conductor) que tiene este vehículo. De manera que si un vehículo tiene 5 plazas, aquí habría que indicar 4 asientos.
+	 */
 	private Integer asientos;
+	@Deprecated
+	/**
+	 * Se quiso incluir para ir viendo qué asientos se iban ocupando, pero no se usa ni se cree que se vaya a usar.
+	 */
 	private Integer asientosOcupados = 0;
+	/**
+	 * El coste de uso del vehículo.
+	 */
 	private Float coste;
 	
 	public Vehiculo(Integer pAsientos, Float pCoste){

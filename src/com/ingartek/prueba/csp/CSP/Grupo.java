@@ -2,9 +2,23 @@ package com.ingartek.prueba.csp.CSP;
 
 import java.util.UUID;
 
+/**
+ * 
+ * <h1>Grupo</h1>
+ * <p>Refleja un grupo de personas a dar servicio usando una serie de vehículos. El único atributo relevante es {@link Grupo#personas}.</p>
+ * 
+ * @author Jon Inazio
+ *
+ */
 public class Grupo {
 
+	/**
+	 * Identificador interno.
+	 */
 	private UUID id;
+	/**
+	 * La cantidad de personas.
+	 */
 	private Integer personas;
 	
 	public Grupo(Integer pPersonas){
